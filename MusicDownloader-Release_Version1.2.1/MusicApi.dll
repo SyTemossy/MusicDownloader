@@ -1,0 +1,95 @@
+{恭喜你发现了本程序的一个彩蛋!!!
+我是这个程序的开发者SyTemossy, 这是本程序的开发日志. (对于萌新来说也可以是一个教程, 配合其中的HTTP食用更佳)
+微信: 15723316144 QQ: 3105647230
+PS. 请原谅文中的错字. }
+
+{前言
+本身只是想找一个下音乐的软件, 没想到最后自己开发了一个}
+
+{26-01-2020 东莞 Debug-0.0.0
+-无功能
+在百度上搜了一款看着很不错的软件, 吾爱破解的(https://www.52pojie.cn/thread-965183-3-1.html). 下下来试了一下, 根本不能用, 打开一会就闪退了. 
+很遗憾只能在别处找找一个了, 本人就前往github上查看是否有合乎我要求的下载器, 找来找去也就两个, 分别是: 
+"z52c"开发的"MusicDownloader"(https://github.com/z52c/MusicDownloader), 和"henson"开发的"MusicDownloader"(https://github.com/henson/MusicDownloader). 
+我又下下来试了一下, "z52c"开发的显示下载已完成, 但路径中的文件夹是空的, 并没下载任何音乐.---失败! 
+而"henson"开发的创建文件夹后, 也在文件夹中下载了音乐.---成功! 我也开始对自己的程序构建基本的框架, 并且研究"henson"开发的程序的源码. 
+但不知我何时心血来潮, 想听听我下的音乐, 结果发现他们都是破损的文件, Groove音乐无法对其进行解码. 好吧, 只能自己干了! 我随机想直接用简单的方法, 思路如下:
+获取url->打开网页->获取网页上的MP3->再获取网页源码->截取歌名->最后下载到本地
+然后, 我在CSDN博客上找到一篇文章(https://blog.csdn.net/weixin_33863087/article/details/88940086)简单的阅读了一下, 根本不可行. 
+1.我想要能下网易云的歌. 2.我是Windows操作系统. 3. 代码访问网页后不会自动播放歌曲. 太受打击了, 我也就没想继续做了. }
+
+{29-01-2020 重庆 Debug-0.1.0
+-可以下载音频, 但是无法获取歌名(仅支持网易云)
+回重庆了, 过了三天不知如何又想起了这个被遗忘的程序. 但是当时内心火热也就开始了这个Project. 
+在网上也找到了网易云的Api(https://binaryify.github.io/NeteaseCloudMusicApi/#/), 接下来很多工作它都派上了用场, 也成为了, 这个Project的开头. 
+今天算是本Project的正式开工. 昨天找到的Api是json语言写的, 对C#开发有点困难, 再者我电脑上怎么都装不了npm, 不只是我不懂json, 还是我的电脑的问题. 
+但最终还是找到了解决办法, 我在CSDN上找到了网易云音乐的接口(https://blog.csdn.net/DragonGirI/article/details/96501646), 通过访问网址获取歌曲的Mp3, 如下:
+"http://music.163.com/song/media/outer/url?id="+ 歌曲的id +".mp3"
+就可以获得对应的歌曲. 但是还是无法获得歌曲的歌名. }
+
+{30-01-2020 重庆 Debug-0.2.0
+-可以下载歌曲(仅支持网易云)
+这时突然想起昨天我发现的一个不成功的获取网易云音乐地址的方法(https://blog.csdn.net/lifugui001/article/details/51589988), 里面说不定有歌曲的名字. 如下:
+"http://music.163.com/api/song/detail/?id="+音乐的id+"&ids=%5B"+音乐的id+"%5D&csrf_token="
+一看果然有! 终于这个Project又有了新的进展. 
+最后讲讲如何从URL下载文件:
+//需要using System.Net
+// 设置参数
+HttpWebRequest request = WebRequest.Create(下载链接) as HttpWebRequest;
+//发送请求并获取相应回应数据
+HttpWebResponse response = request.GetResponse() as HttpWebResponse;
+//直到request.GetResponse()程序才开始向目标网页发送Post请求
+Stream responseStream = response.GetResponseStream();
+string localPath = 保存的路径+文件名+后缀名;
+//可以直接输入文件名+后缀名
+//创建本地文件写入流
+Stream stream = new FileStream(localPath, FileMode.Create);
+byte[] bArr = new byte[1024];
+int size = responseStream.Read(bArr, 0, (int)bArr.Length);
+while (size > 0)
+    stream.Write(bArr, 0, size);
+    size = responseStream.Read(bArr, 0, (int)bArr.Length);
+stream.Close();
+responseStream.Close(); 
+但如何下载歌单呢? 我之前找的Api只是给我了思路, 里面的Api我用不来, 所以只好自己拼了个获取歌单详情的URL, 如下:
+"http://music.163.com/api/playlist/detail/?id="+歌单的id+"&ids=["+歌单的id+"]&csrf_token="
+正在进一步想如何截取返回的内容中的个别歌曲id. }
+
+{31-01-2020 重庆 Debug-0.2.1
+-可以下载歌曲(仅支持网易云)
+昨天晚上想到一个方法来截取获取的data中的歌曲id的方法, 特别5:30起来写代码. 如下: (有点low)
+//本方法是找了好久才找到的, IndexOf只能找第一位, 但Regex+Match就可以批量查找
+//需要using System.Text.RegularExpressions
+Regex reg = new Regex(要找的内容);
+Match mat = reg.Match(获得的数据);
+while (mat.Success)
+            //给的参数分别是 要找的字符串, 从何处开始找, 从何处结束
+            int sindex = data.IndexOf(":", mat.Index, 4);
+            //同上, 只是少了最后一个参数
+            int mindex = data.IndexOf(",", mat.Index);
+            int eindex = data.IndexOf("position", mindex, 11);
+            if (eindex != -1)
+                //Substring是我之前学习的一个坎怎么都截取不到自己想要的内容
+                //参数的正确填法不是 开始位置, 结束位置
+                //正确的为 开始位置, 截取长度(及结束位置-开始位置)
+                playlist.Add(data.Substring(sindex + 1, mindex - mat.Index - 4));
+            //进行下一处的查找
+            mat = reg.Match(data, mat.Index + mat.Length); }
+
+{01-02-2020 重庆 Release-1.0.0 和 Release-1.0.1
+1.0.0
+-可以下载网易云的单曲与歌单
+今天把歌单的下载也写完了, 也就一个foreach. 但最高兴的是本软件终于Release了, 拥有完整的功能. 可以投入正常使用. 
+1.0.1
+-修复了非法字符导致文件无法保存的Bug
+修复了一个特殊文件名无法储存的的Bug
+科普: 
+文件命名时的非法字符是: \  /  :  *  ?  "  <  >  |  (抱歉只写了这么点, 懒得打字了)}
+
+{02-02-2020 重庆 Release-1.2.0 和 Release-1.2.1
+1.2.0
+-可以下载QQ音乐喽!
+其实腾讯比网易加密做的好, 
+
+
+
